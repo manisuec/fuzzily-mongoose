@@ -1,0 +1,60 @@
+{
+  "name": "mongoose-fuzzy-searching",
+  "version": "2.0.4",
+  "author": "Vassilis Pallas <vspallas@gmail.com>",
+  "description": "Mongoose fuzzy searching plugin",
+  "main": "index.js",
+  "scripts": {
+    "lint:fix": "eslint --fix .",
+    "format": "prettier --write \"./**/*.{json,js}\"",
+    "lint": "eslint --ext .js \"./**/*.{json,js}\"",
+    "test:integration": "jest --colors --runInBand __tests__/**.test.js",
+    "test:unit": "jest --colors spec.js",
+    "test": "jest --colors --runInBand",
+    "test:watch": "npm test -- --watch",
+    "test:unit:watch": "npm run test:unit --watch",
+    "test:integration:watch": "npm run test:integration --watch"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "./**/**/*.{json,js}": [
+      "npm run lint",
+      "npm run format"
+    ]
+  },
+  "keywords": [
+    "mongoose",
+    "fuzzy",
+    "searching",
+    "search",
+    "plugin",
+    "mongo",
+    "mongodb"
+  ],
+  "bugs": {
+    "url": "https://github.com/VassilisPallas/mongoose-fuzzy-searching/issues"
+  },
+  "homepage": "https://github.com/VassilisPallas/mongoose-fuzzy-searching",
+  "license": "MIT",
+  "peerDependencies": {
+    "mongoose": "^8.1.2"
+  },
+  "devDependencies": {
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb-base": "^14.1.0",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-jest": "^23.11.0",
+    "eslint-plugin-prettier": "^3.1.3",
+    "husky": "^4.2.5",
+    "jest": "^26.0.1",
+    "lint-staged": "^10.2.2",
+    "mongodb-memory-server": "^6.6.0",
+    "mongoose": "^8.1.2",
+    "prettier": "^2.0.5"
+  }
+}
