@@ -24,6 +24,7 @@ The reason for a fork and a new npm library is simply from the limitation that t
     - [Fields](#fields)
       - [String field](#string-field)
       - [Object field](#object-field)
+    - [Equality Predicate](#equality-predicate)
     - [Middlewares](#middlewares)
 - [Query parameters](#query-parameters)
   - [Instance method](#instance-method)
