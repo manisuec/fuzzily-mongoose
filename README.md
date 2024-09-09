@@ -359,12 +359,26 @@ In other words, this plugin creates anagrams when you create or update a documen
 
 In order to create anagrams for pre-existing documents, you should update each document. The below example, updates the `firstName` attribute to every document on the collection `User`.
 
-```javascript
-const cursor = Model.find().cursor();
-cursor.next(function (error, doc) {
-  const obj = attrs.reduce((acc, attr) => ({ ...acc, [attr]: doc[attr] }), {});
-  return Model.findByIdAndUpdate(doc._id, obj);
-});
+```js
+const query = {};
+let promiseArr = [];
+let count = 0;
+
+for await (const item of Model.find(query).cursor()) {
+  const obj = attrs.reduce((acc, attr) => ({ ...acc, [attr]: item[attr] }), {});
+  promiseArr.push(databaseService.findByIdAndUpdate(modelName, item._id, obj));
+
+  if (count % 50 === 0) {
+    await Promise.all(promiseArr);
+    promiseArr = [];
+  }
+
+  count++;
+}
+
+if (promiseArr.length !== 0) {
+  await Promise.all(promiseArr);
+}
 ```
 
 ### Delete old ngrams from all documents
@@ -372,11 +386,30 @@ cursor.next(function (error, doc) {
 In the previous example, we set `firstName` and `lastName` as the fuzzy attributes. If you remove the `firstName` from the fuzzy fields, the `firstName_fuzzy` array will not be removed by the collection. If you want to remove the array on each document you have to unset that value.
 
 ```javascript
-const cursor = Model.find().cursor();
-cursor.next(function (error, doc) {
-  const $unset = attrs.reduce((acc, attr) => ({ ...acc, [`${attr}_fuzzy`]: 1 }), {});
-  return Model.findByIdAndUpdate(data._id, { $unset }, { new: true, strict: false });
-});
+// const attrs = ['field_name'];
+const query = {};
+let promiseArr = [];
+let count = 0;
+
+for await (const item of Model.find(query).cursor()) {
+  const $unset = attrs.reduce(
+    (acc, attr) => ({ ...acc, [`${attr}_fuzzy`]: 1 }),
+    {}
+  );
+
+  promiseArr.push(databaseService.update(modelName, item._id, { $unset }));
+
+  if (count % 50 === 0) {
+    await Promise.all(promiseArr);
+    promiseArr = [];
+  }
+
+  count++;
+}
+
+if (promiseArr.length !== 0) {
+  await Promise.all(promiseArr);
+}
 ```
 
 ## Testing and code coverage
