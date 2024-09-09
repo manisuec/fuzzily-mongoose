@@ -635,20 +635,20 @@ module.exports = function (schema, pluginOptions) {
     throw new Error('You must set at least one field for fuzzy search.');
   }
 &nbsp;
-  const { fields, middlewares, equalityFilter } = pluginOptions;
+  const { fields, middlewares, equalityPredicate } = pluginOptions;
 &nbsp;
   if (!Array.isArray(fields)) {
     throw new TypeError('Fields must be an array.');
   }
 &nbsp;
-  <span class="missing-if-branch" title="if path not taken" >I</span>if (isObject(equalityFilter) &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >Object.keys(equalityFilter).length !== 1)</span> {
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (isObject(equalityPredicate) &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >Object.keys(equalityPredicate).length !== 1)</span> {
 <span class="cstat-no" title="statement not covered" >    throw new TypeError('Equality filter can have only one filter');</span>
   }
 &nbsp;
   fields.forEach(validateItem);
   validateMiddlewares(middlewares);
 &nbsp;
-  const { indexes, weights } = <span class="cstat-no" title="statement not covered" >createFields(schema, fields, equalityFilter);</span>
+  const { indexes, weights } = <span class="cstat-no" title="statement not covered" >createFields(schema, fields, equalityPredicate);</span>
 <span class="cstat-no" title="statement not covered" >  schema.index(indexes, { weights, name: 'fuzzy_text' });</span>
 &nbsp;
   const hideElements = <span class="cstat-no" title="statement not covered" >removeFuzzyElements(fields);</span>
