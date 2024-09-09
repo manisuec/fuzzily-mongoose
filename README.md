@@ -8,6 +8,9 @@
 fuzzily-mongoose is simple and lightweight plugin that enables fuzzy searching in documents in MongoDB.
 This repo is a fork from [VassilisPallas/mongoose-fuzzy-searching](https://github.com/VassilisPallas/mongoose-fuzzy-searching)
 This code is based on [this article](https://medium.com/xeneta/fuzzy-search-with-mongodb-and-python-57103928ee5d).
+
+The reason for a fork and a new npm library is simply from the limitation that text query based on fuzzy logic scans all the documents in a given collection and only then you can filter out documents based on values of other fields. This makes the query inefficient. With the introduction of `equalityPredicate`, you can first filter out the documents and then perform a text query on the filtered documents.
+
 <!-- 
 [![Build Status](https://travis-ci.com/VassilisPallas/mongoose-fuzzy-searching.svg?token=iwmbqGL1Zp9rkA7hmQ6P&branch=master)](https://travis-ci.com/VassilisPallas/mongoose-fuzzy-searching)
 [![codecov](https://codecov.io/gh/VassilisPallas/mongoose-fuzzy-searching/branch/master/graph/badge.svg)](https://codecov.io/gh/VassilisPallas/mongoose-fuzzy-searching) -->
@@ -213,6 +216,40 @@ UserSchema.plugin(fuzzily_mongoose, {
   ],
 });
 ```
+
+#### Equality Predicate
+
+`equalityPredicate` is an optional `Object`. 
+
+e.g.
+
+```javascript
+const fuzzily_mongoose = require('fuzzily-mongoose');
+
+const UserSchema = new Schema({
+  firstName: String,
+  lastName: String,
+  email: String,
+  orgId: String
+});
+
+UserSchema.plugin(fuzzily_mongoose, { fields: ['firstName'], equalityPredicate: {orgId: 1} });
+```
+
+This will create a fuzzy text index:
+```
+key: { orgId: 1, _fts: 'text', _ftsx: 1 },
+    name: 'fuzzy_text',
+```
+
+```javascript
+User.fuzzySearch({ query: 'jo', prefixOnly: true, minSize: 4 }, {orgId: 'ORG100'})
+  .then(console.log)
+  .catch(console.error);
+
+```
+
+The above code will first filter out documents based on org id and then run text query on filtered documents. This improves the number of documents scanned and hence improves the performance of query in a big way.
 
 #### Middlewares
 
