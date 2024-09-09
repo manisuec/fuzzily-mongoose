@@ -447,6 +447,12 @@ $ npm run test:unit
 $ npm run test:integration
 ```
 
+> <a href="https://www.buymeacoffee.com/manisuec" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-blue.png" alt="Buy Me A Coffee" height="52" width="200"></a> <br/>
+> If you find this utility library useful, you can [buy me a coffee](https://www.buymeacoffee.com/manisuec) to keep me energized for creating libraries like this.
+
+## Tech Blog
+Read my blog at [Tech Insights: Personal Tech Blog](https://techinsights.manisuec.com)
+
 ## License
 
 MIT License
