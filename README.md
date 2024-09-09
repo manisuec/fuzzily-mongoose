@@ -1,12 +1,13 @@
 # Mongoose Fuzzy Searching
 
-mongoose-fuzzy-searching is simple and lightweight plugin that enables fuzzy searching in documents in MongoDB.
+fuzzily-mongoose is simple and lightweight plugin that enables fuzzy searching in documents in MongoDB.
+This repo is a fork from [VassilisPallas/mongoose-fuzzy-searching](https://github.com/VassilisPallas/mongoose-fuzzy-searching)
 This code is based on [this article](https://medium.com/xeneta/fuzzy-search-with-mongodb-and-python-57103928ee5d).
-
+<!-- 
 [![Build Status](https://travis-ci.com/VassilisPallas/mongoose-fuzzy-searching.svg?token=iwmbqGL1Zp9rkA7hmQ6P&branch=master)](https://travis-ci.com/VassilisPallas/mongoose-fuzzy-searching)
-[![codecov](https://codecov.io/gh/VassilisPallas/mongoose-fuzzy-searching/branch/master/graph/badge.svg)](https://codecov.io/gh/VassilisPallas/mongoose-fuzzy-searching)
+[![codecov](https://codecov.io/gh/VassilisPallas/mongoose-fuzzy-searching/branch/master/graph/badge.svg)](https://codecov.io/gh/VassilisPallas/mongoose-fuzzy-searching) -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FVassilisPallas%2Fmongoose-fuzzy-searching.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FVassilisPallas%2Fmongoose-fuzzy-searching?ref=badge_shield)
+<!-- [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FVassilisPallas%2Fmongoose-fuzzy-searching.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FVassilisPallas%2Fmongoose-fuzzy-searching?ref=badge_shield) -->
 
 - [Features](#features)
 - [Install](#install)
@@ -39,13 +40,13 @@ This code is based on [this article](https://medium.com/xeneta/fuzzy-search-with
 Install using [npm](https://npmjs.org)
 
 ```bash
-$ npm i mongoose-fuzzy-searching
+$ npm i fuzzily-mongoose
 ```
 
 or using yarn
 
 ```bash
-$ yarn add mongoose-fuzzy-searching
+$ yarn add fuzzily-mongoose
 ```
 
 ## Getting started
@@ -72,7 +73,7 @@ In the below example, we have a `User` collection and we want to make fuzzy sear
 
 ```javascript
 const { Schema } = require('mongoose');
-const mongoose_fuzzy_searching = require('mongoose-fuzzy-searching');
+const fuzzily_mongoose = require('fuzzily-mongoose');
 
 const UserSchema = new Schema({
   firstName: String,
@@ -81,7 +82,7 @@ const UserSchema = new Schema({
   age: Number,
 });
 
-UserSchema.plugin(mongoose_fuzzy_searching, { fields: ['firstName', 'lastName'] });
+UserSchema.plugin(fuzzily_mongoose, { fields: ['firstName', 'lastName'] });
 const User = mongoose.model('User', UserSchema);
 module.exports = { User };
 ```
@@ -132,7 +133,7 @@ Fields attribute is mandatory and should be either an array of `Strings` or an a
 If you want to use the default options for all your fields, you can just pass them as a string.
 
 ```javascript
-const mongoose_fuzzy_searching = require('mongoose-fuzzy-searching');
+const fuzzily_mongoose = require('fuzzily-mongoose');
 
 const UserSchema = new Schema({
   firstName: String,
@@ -140,7 +141,7 @@ const UserSchema = new Schema({
   email: String,
 });
 
-UserSchema.plugin(mongoose_fuzzy_searching, { fields: ['firstName', 'lastName'] });
+UserSchema.plugin(fuzzily_mongoose, { fields: ['firstName', 'lastName'] });
 ```
 
 ##### Object field
@@ -161,7 +162,7 @@ The below table contains the expected keys for this object.
 Example:
 
 ```javascript
-const mongoose_fuzzy_searching = require('mongoose-fuzzy-searching');
+const fuzzily_mongoose = require('fuzzily-mongoose');
 
 const UserSchema = new Schema({
   firstName: String,
@@ -181,7 +182,7 @@ const UserSchema = new Schema({
   ],
 });
 
-UserSchema.plugin(mongoose_fuzzy_searching, {
+UserSchema.plugin(fuzzily_mongoose, {
   fields: [
     {
       name: 'firstName',
@@ -229,14 +230,14 @@ Middlewares is an optional `Object` that can contain custom `pre` middlewares. T
 If you want to add any of the middlewares above, you can add it directly on the plugin.
 
 ```javascript
-const mongoose_fuzzy_searching = require('mongoose-fuzzy-searching');
+const fuzzily_mongoose = require('fuzzily-mongoose');
 
 const UserSchema = new Schema({
   firstName: String,
   lastName: String,
 });
 
-UserSchema.plugin(mongoose_fuzzy_searching, {
+UserSchema.plugin(fuzzily_mongoose, {
   fields: ['firstName'],
   middlewares: {
     preSave: function () {
@@ -249,14 +250,14 @@ UserSchema.plugin(mongoose_fuzzy_searching, {
 Middlewares can also be asynchronous functions:
 
 ```javascript
-const mongoose_fuzzy_searching = require('mongoose-fuzzy-searching');
+const fuzzily_mongoose = require('fuzzily-mongoose');
 
 const UserSchema = new Schema({
   firstName: String,
   lastName: String,
 });
 
-UserSchema.plugin(mongoose_fuzzy_searching, {
+UserSchema.plugin(fuzzily_mongoose, {
   fields: ['firstName'],
   middlewares: {
     preUpdateOne: async function {
@@ -341,7 +342,7 @@ const user = await User.find({ age: { $gte: 30 } })
 The plugin creates indexes for the selected fields. In the below example the new indexes will be `firstName_fuzzy` and `lastName_fuzzy`. Also, each document will have the fields `firstName_fuzzy`[String] and `lastName_fuzzy`[String]. These arrays will contain the anagrams for the selected fields.
 
 ```javascript
-const mongoose_fuzzy_searching = require('mongoose-fuzzy-searching');
+const fuzzily_mongoose = require('fuzzily-mongoose');
 
 const UserSchema = new Schema({
   firstName: String,
@@ -350,7 +351,7 @@ const UserSchema = new Schema({
   age: Number,
 });
 
-UserSchema.plugin(mongoose_fuzzy_searching, { fields: ['firstName', 'lastName'] });
+UserSchema.plugin(fuzzily_mongoose, { fields: ['firstName', 'lastName'] });
 ```
 
 In other words, this plugin creates anagrams when you create or update a document. All the pre-existing documents won't contain these fuzzy arrays, so `fuzzySearch` function, will not be able to find them.
@@ -449,7 +450,7 @@ $ npm run test:integration
 
 MIT License
 
-Copyright (c) 2019 Vassilis Pallas
+Copyright (c) 2024 Manish Prasad
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -469,4 +470,4 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FVassilisPallas%2Fmongoose-fuzzy-searching.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2FVassilisPallas%2Fmongoose-fuzzy-searching?ref=badge_large)
+<!-- [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FVassilisPallas%2Fmongoose-fuzzy-searching.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2FVassilisPallas%2Fmongoose-fuzzy-searching?ref=badge_large) -->

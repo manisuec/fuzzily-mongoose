@@ -1,7 +1,7 @@
 {
-  "name": "mongoose-fuzzy-searching",
-  "version": "2.0.4",
-  "author": "Vassilis Pallas <vspallas@gmail.com>",
+  "name": "fuzzily-mongoose",
+  "version": "1.0.7",
+  "author": "Manish Prasad <manishvaishu25@gmail.com>",
   "description": "Mongoose fuzzy searching plugin",
   "main": "index.js",
   "scripts": {
@@ -36,9 +36,9 @@
     "mongodb"
   ],
   "bugs": {
-    "url": "https://github.com/VassilisPallas/mongoose-fuzzy-searching/issues"
+    "url": "https://github.com/manisuec/fuzzily-mongoose/issues"
   },
-  "homepage": "https://github.com/VassilisPallas/mongoose-fuzzy-searching",
+  "homepage": "https://github.com/manisuec/fuzzily-mongoose",
   "license": "MIT",
   "peerDependencies": {
     "mongoose": "^8.1.2"
