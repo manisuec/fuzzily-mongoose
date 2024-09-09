@@ -1,12 +1,12 @@
 class Create {
-  constructor(schema, Type, addToSchema, addArrayToSchema, equalityFilter = {}) {
+  constructor(schema, Type, addToSchema, addArrayToSchema, equalityPredicate = {}) {
     this.indexes = {};
     this.weights = {};
     this.schema = schema;
     this.Type = Type;
     this.addToSchema = addToSchema;
     this.addArrayToSchema = addArrayToSchema;
-    this.equalityFilter = equalityFilter;
+    this.equalityPredicate = equalityPredicate;
   }
 
   fromString(item) {
@@ -139,13 +139,13 @@ const createByFieldType = (isString, isObject) => (obj) => (item) => {
 const createFields = (addToSchema, addArrayToSchema, createField, MixedType) => (
   schema,
   fields,
-  equalityFilter,
+  equalityPredicate,
 ) => {
-  const create = new Create(schema, MixedType, addToSchema, addArrayToSchema, equalityFilter);
+  const create = new Create(schema, MixedType, addToSchema, addArrayToSchema, equalityPredicate);
   fields.forEach(createField(create));
 
-  if (Object.keys(create.equalityFilter).length > 0) {
-    create.indexes = { ...create.equalityFilter, ...create.indexes };
+  if (Object.keys(create.equalityPredicate).length > 0) {
+    create.indexes = { ...create.equalityPredicate, ...create.indexes };
   }
 
   return { indexes: create.indexes, weights: create.weights };
