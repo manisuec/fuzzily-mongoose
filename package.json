@@ -1,6 +1,6 @@
 {
   "name": "fuzzily-mongoose",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "author": "Manish Prasad <manishvaishu25@gmail.com>",
   "description": "Mongoose fuzzy searching plugin",
   "main": "index.js",
