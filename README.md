@@ -5,11 +5,9 @@
 
 # Mongoose Fuzzy Searching
 
-fuzzily-mongoose is simple and lightweight plugin that enables fuzzy searching in documents in MongoDB.
-This repo is a fork from [VassilisPallas/mongoose-fuzzy-searching](https://github.com/VassilisPallas/mongoose-fuzzy-searching)
-This code is based on [this article](https://medium.com/xeneta/fuzzy-search-with-mongodb-and-python-57103928ee5d).
+Harness the power of fuzzy logic with `fuzzily-mongoose`, an open source, simple and lightweight plugin that enables fuzzy searching in documents in MongoDB. This repo is a fork from [VassilisPallas/mongoose-fuzzy-searching](https://github.com/VassilisPallas/mongoose-fuzzy-searching).
 
-The reason for a fork and a new npm library is simply from the limitation that text query based on fuzzy logic scans all the documents in a given collection and only then you can filter out documents based on values of other fields. This makes the query inefficient. With the introduction of `equalityPredicate`, you can first filter out the documents and then perform a text query on the filtered documents.
+The reason for a fork and a new npm library is simply from the limitation that text query based on fuzzy logic scans all the documents in a given collection and only then you can filter out documents based on values of other fields. This makes the query inefficient. With the introduction of `equalityPredicate`, you can first filter out the documents and then perform a text query on the filtered documents. See [Performance section](#performance) for improvement in search with `fuzzily-mongoose` plugin. With the help of this plugin, you can enable partial text search efficiently in self hosted Mongodb installation without going for paid services of Mongodb Atlas or using solutions like Elasticsearch etc. This is very helpful for startups during initial days when cost is a concern and also for developers who are working on their own ideas.
 
 <!-- 
 [![Build Status](https://travis-ci.com/VassilisPallas/mongoose-fuzzy-searching.svg?token=iwmbqGL1Zp9rkA7hmQ6P&branch=master)](https://travis-ci.com/VassilisPallas/mongoose-fuzzy-searching)
@@ -35,6 +33,7 @@ The reason for a fork and a new npm library is simply from the limitation that t
 - [Testing and code coverage](#testing-and-code-coverage)
   - [All tests](#all-tests)
   - [Available test suites](#available-test-suites)
+- [Performance](#performance)
 - [License](#license)
 
 ## Features
@@ -487,6 +486,63 @@ $ npm run test:unit
 ```bash
 $ npm run test:integration
 ```
+
+## Performance
+
+Let us define a collection as below
+```javascript
+const mongoose = require('mongoose');
+const fuzzySearchPlugin = require('fuzzily-mongoose');
+
+const productSchema = new mongoose.Schema({
+  name: String,
+  description: String,
+  category: String,
+});
+
+productSchema.plugin(fuzzySearchPlugin, {
+  fields: ['name'],  // Specify the fields for fuzzy searching
+  equalityPredicate: { category: 1 }, // Predicate for filtering
+});
+
+const Product = mongoose.model('Product', productSchema);
+```
+
+Now insert data into this collection and perform query:
+
+```javascript
+const results = await Product.fuzzySearch(
+   { query: "Smartphone" },
+   { category: "Electronics" }
+);
+
+console.log(results);
+```
+![performance](image.png)
+
+**Without Equality Predicate** (Old Approach)
+
+In the old approach, MongoDB runs a fuzzy search across the entire collection, resulting in a high number of documents and keys being examined:
+Total Keys Examined: 36,854
+Total Docs Examined: 24,298
+Execution Time: 88 ms
+
+These numbers represent the large search space MongoDB has to sift through, which slows down query performance, especially as the collection size grows.
+
+**With Equality Predicate** (New Approach)
+
+By applying the equality predicate and utilizing a compound text index, I was able to significantly narrow down the search space. Here's how the new approach performed:
+Total Keys Examined: 1739
+Total Docs Examined: 566
+Execution Time: 6 ms
+
+The improvement here is substantial. By reducing the number of documents and keys MongoDB needs to examine, the query becomes far more efficient, leading to faster response times and reduced load on the database.
+
+Read more in detail at [Building Fuzzy Search in MongoDB: An Open-Source Solution](https://medium.com/@manisuec/building-fuzzy-search-in-mongodb-an-open-source-solution-29f3cd5f2e49)
+
+### Comparison
+
+[Fuzzy search comparison](https://github.com/Aditya-ds-2000/Fuzzy-Search-comparison-in-MongoDB) - Compare both approaches for yourself by running the test cases we've set up. See the performance improvement in real-time!
 
 ## Tech Blog
 Read my blog at [Tech Insights: Personal Tech Blog](https://techinsights.manisuec.com)
