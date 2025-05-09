@@ -9,7 +9,7 @@
 
 Enhance your MongoDB search capabilities with fuzzily-mongoose, a lightweight, high-performance fuzzy search plugin that enables efficient partial text search in self-hosted MongoDB installations. This optimized fork of the original [VassilisPallas/mongoose-fuzzy-searching](https://github.com/VassilisPallas/mongoose-fuzzy-searching) delivers faster search performance and better results through our innovative equality predicate feature.
 
-The reason for a fork and a new npm library is simply from the limitation that text query based on fuzzy logic scans all the documents in a given collection and only then you can filter out documents based on values of other fields. This makes the query inefficient. With the introduction of `equalityPredicate`, you can first filter out the documents and then perform a text query on the filtered documents. See [Performance section](#performance) for improvement in search with `fuzzily-mongoose` plugin. With the help of this plugin, you can enable partial text search efficiently in self hosted Mongodb installation without going for paid services of Mongodb Atlas or using solutions like Elasticsearch etc. This is very helpful for startups during initial days when cost is a concern and also for developers who are working on their own ideas.
+The reason for a fork and a new npm library is simply from the limitation that text query based on fuzzy logic scans all the documents in a given collection and only then you can filter out documents based on values of other fields. This makes the query inefficient. With the introduction of `equalityPredicate`, you can first filter out the documents and then perform a text query on the filtered documents. See [Performance section](#performance-breakthrough-equality-predicates) for improvement in search with `fuzzily-mongoose` plugin. With the help of this plugin, you can enable partial text search efficiently in self hosted Mongodb installation without going for paid services of Mongodb Atlas or using solutions like Elasticsearch etc. This is very helpful for startups during initial days when cost is a concern and also for developers who are working on their own ideas.
 
 <!-- 
 [![Build Status](https://travis-ci.com/VassilisPallas/mongoose-fuzzy-searching.svg?token=iwmbqGL1Zp9rkA7hmQ6P&branch=master)](https://travis-ci.com/VassilisPallas/mongoose-fuzzy-searching)
@@ -23,6 +23,8 @@ The reason for a fork and a new npm library is simply from the limitation that t
 - **Simple Integration** with your existing Mongoose schemas
 - **Fully Customizable** fuzzy search parameters and weights
 - **Works with Pre-Existing Data** through easy migration utilities
+
+## Topics
 
 - [Features](#features)
 - [Install](#install)
