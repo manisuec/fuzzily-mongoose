@@ -2,7 +2,6 @@ const addWholePhrase = (arr, text) => {
   if (text.split(' ').length > 1) {
     return [...arr, text.toLowerCase()];
   }
-
   return arr;
 };
 
@@ -18,9 +17,6 @@ const nGrams = (constants) => (text, minSize, prefixOnly) => {
     minSize = constants.DEFAULT_MIN_SIZE;
   }
 
-  const set = new Set();
-  let index;
-
   if (minSize <= 0) {
     throw new Error('minSize must be greater than 0.');
   }
@@ -29,28 +25,29 @@ const nGrams = (constants) => (text, minSize, prefixOnly) => {
     return [];
   }
 
-  text = text.slice ? text.toLowerCase() : String(text);
-  index = prefixOnly ? 0 : text.length - minSize + 1;
-
-  if (text.length <= minSize) {
+  const normalizedText = text.slice ? text.toLowerCase() : String(text);
+  
+  if (normalizedText.length <= minSize) {
     return [];
   }
 
+  const set = new Set();
+  let index = prefixOnly ? 0 : normalizedText.length - minSize + 1;
+
   if (prefixOnly) {
-    while (minSize < text.length + 1) {
-      set.add(text.slice(index, index + minSize));
+    while (minSize < normalizedText.length + 1) {
+      set.add(normalizedText.slice(index, index + minSize));
       minSize++;
     }
-
     return Array.from(set);
   }
 
-  while (minSize <= text.length + 1) {
+  while (minSize <= normalizedText.length + 1) {
     if (index !== 0) {
-      set.add(text.slice(--index, index + minSize));
+      set.add(normalizedText.slice(--index, index + minSize));
     } else {
       minSize++;
-      index = text.length - minSize + 1;
+      index = normalizedText.length - minSize + 1;
     }
   }
 
@@ -75,19 +72,23 @@ const makeNGrams = (constants, replaceSymbols) => (
     return [];
   }
 
-  const trimmedText = text.replace(/\s+/g, ' ');
+  const trimmedText = text.replace(/\s+/g, ' ').trim();
+  if (!trimmedText) {
+    return [];
+  }
 
-  const result = trimmedText
-    .split(' ')
-    .map((q) =>
-      nGrams(constants)(
-        replaceSymbols(q, escapeSpecialCharacters),
-        minSize || constants.DEFAULT_MIN_SIZE,
-        prefixOnly || constants.DEFAULT_PREFIX_ONLY,
-      ),
-    )
-    .reduce((acc, arr) => acc.concat(arr), []);
-  return addWholePhrase(Array.from(new Set(result)), text);
+  const words = trimmedText.split(' ');
+  const ngrams = words.flatMap((word) => {
+    const processedWord = replaceSymbols(word, escapeSpecialCharacters);
+    return nGrams(constants)(
+      processedWord,
+      minSize || constants.DEFAULT_MIN_SIZE,
+      prefixOnly || constants.DEFAULT_PREFIX_ONLY,
+    );
+  });
+
+  const uniqueNgrams = Array.from(new Set(ngrams));
+  return addWholePhrase(uniqueNgrams, text);
 };
 
 module.exports = { nGrams, makeNGrams };
