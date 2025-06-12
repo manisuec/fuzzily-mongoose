@@ -53,6 +53,11 @@ The reason for a fork and a new npm library is simply from the limitation that t
 - Creates Ngrams for the selected keys in the collection
 - [Add **fuzzySearch** method on model](#simple-usage)
 - [Work with pre-existing data](#work-with-pre-existing-data)
+- Field-specific search weights for better result relevance
+- Search analytics for monitoring and optimization
+- Smart search suggestions for improved user experience
+- Aggregation pipeline support for complex queries
+- Equality predicates for targeted and efficient searching
 
 ## Install
 
@@ -223,7 +228,7 @@ Read more in detail at [Building Fuzzy Search in MongoDB: An Open-Source Solutio
 
 ### Plugin options
 
-Options can contain `fields` and `middlewares`.
+Options can contain `fields`, `middlewares`, `analytics`, `suggestions`, and `equalityPredicate`.
 
 #### Fields
 
@@ -247,67 +252,93 @@ UserSchema.plugin(fuzzily_mongoose, { fields: ['firstName', 'lastName'] });
 
 ##### Object field
 
-In case you want to override any of the default options for your arguments, you can add them as an object
-and override any of the values you wish.
-The below table contains the expected keys for this object.
-
-| **key**                 | **type**          | **default** | **description**                                                                                                                                                                                                          |
-| ----------------------- | ----------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| name                    | **String**        | null        | Collection key name                                                                                                                                                                                                      |
-| minSize                 | **Integer**       | 2           | N-grams min size. [Learn more about N-grams](http://text-analytics101.rxnlp.com/2014/11/what-are-n-grams.html)                                                                                                           |
-| weight                  | **Integer**       | 1           | Denotes the significance of the field relative to the other indexed fields in terms of the text search score. [Learn more about index weights](https://docs.mongodb.com/manual/tutorial/control-results-of-text-search/) |
-| prefixOnly              | **Boolean**       | false       | Only return ngrams from start of word. (It gives more precise results)                                                                                                                                                   |
-| escapeSpecialCharacters | **Boolean**       | true        | Remove special characters from N-grams.                                                                                                                                                                                  |
-| keys                    | **Array[String]** | null        | If the type of the collection attribute is `Object` or `[Object]` (see example), you can define which attributes will be used for fuzzy searching                                                                        |
-
-Example:
+In case you want to override any of the default options for your arguments, you can add them as an object. You can also specify field-specific weights and configurations:
 
 ```javascript
-const fuzzily_mongoose = require('fuzzily-mongoose');
-
 const UserSchema = new Schema({
   firstName: String,
   lastName: String,
   email: String,
-  content: {
-      en: String,
-      de: String,
-      it: String
-  }
-  text: [
-    {
-      title: String,
-      description: String,
-      language: String,
-    },
-  ],
 });
 
 UserSchema.plugin(fuzzily_mongoose, {
   fields: [
-    {
-      name: 'firstName',
-      minSize: 2,
-      weight: 5,
-    },
-    {
-      name: 'lastName',
-      minSize: 3,
-      prefixOnly: true,
-    },
-    {
+    { name: 'firstName', weight: 2 },  // Higher weight for firstName
+    { name: 'lastName', weight: 1 },   // Default weight for lastName
+    { 
       name: 'email',
-      escapeSpecialCharacters: false,
-    },
-    {
-      name: 'content',
-      keys: ['en', 'de', 'it'],
-    },
-    {
-      name: 'text',
-      keys: ['title', 'language'],
-    },
+      weight: 0.5,
+      config: {
+        minSize: 3,        // Minimum n-gram size
+        prefixOnly: true   // Only match prefixes
+      }
+    }
+  ]
+});
+```
+
+#### Analytics
+
+Enable search analytics to track and optimize your search performance:
+
+```javascript
+const UserSchema = new Schema({
+  firstName: String,
+  lastName: String,
+});
+
+UserSchema.plugin(fuzzily_mongoose, {
+  fields: ['firstName', 'lastName'],
+  analytics: true  // Enable analytics
+});
+
+// Get analytics data
+const analytics = await User.getAnalytics();
+console.log(analytics);
+// {
+//   totalSearches: 100,
+//   averageResponseTime: 45,
+//   successRate: 0.98,
+//   popularQueries: [...]
+// }
+```
+
+#### Suggestions
+
+Enable smart search suggestions to improve user experience:
+
+```javascript
+const UserSchema = new Schema({
+  firstName: String,
+  lastName: String,
+});
+
+UserSchema.plugin(fuzzily_mongoose, {
+  fields: ['firstName', 'lastName'],
+  suggestions: {
+    minLength: 2,        // Minimum query length for suggestions
+    maxSuggestions: 5    // Maximum number of suggestions
+  }
+});
+
+// Get suggestions for a partial query
+const suggestions = await User.getSuggestions('jo');
+console.log(suggestions);
+// ['john', 'joe', 'josh', 'jordan']
+```
+
+#### Aggregation Pipeline
+
+Use the aggregation pipeline for complex search queries:
+
+```javascript
+const results = await User.fuzzySearchAggregate('jo', {
+  pipeline: [
+    { $match: { age: { $gt: 18 } } },
+    { $project: { firstName: 1, lastName: 1 } }
   ],
+  maxEdits: 1,           // Maximum edit distance
+  prefixLength: 2        // Minimum prefix length for fuzzy matching
 });
 ```
 
@@ -621,3 +652,218 @@ SOFTWARE.
 
 > <a href="https://www.buymeacoffee.com/manisuec" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-blue.png" alt="Buy Me A Coffee" height="52" width="200"></a> <br/>
 > If you find this utility library useful, you can [buy me a coffee](https://www.buymeacoffee.com/manisuec) to keep me energized for creating libraries like this.
+
+## Advanced Features and Examples
+
+### Field-specific Search Weights
+
+Field weights allow you to prioritize certain fields in your search results. Higher weights mean higher priority in the search ranking.
+
+```javascript
+const ProductSchema = new Schema({
+  name: String,
+  description: String,
+  tags: [String],
+  sku: String
+});
+
+ProductSchema.plugin(fuzzily_mongoose, {
+  fields: [
+    { name: 'name', weight: 10 },        // Highest priority
+    { name: 'description', weight: 5 },   // Medium priority
+    { name: 'tags', weight: 3 },         // Lower priority
+    { name: 'sku', weight: 1 }           // Lowest priority
+  ]
+});
+
+// Search example
+const results = await Product.fuzzySearch('smartphone');
+// Results will prioritize matches in the 'name' field over other fields
+```
+
+You can also configure additional parameters for each field:
+
+```javascript
+ProductSchema.plugin(fuzzily_mongoose, {
+  fields: [
+    {
+      name: 'name',
+      weight: 10,
+      config: {
+        minSize: 3,           // Minimum n-gram size
+        prefixOnly: true,     // Only match prefixes
+        escapeSpecialCharacters: false  // Keep special characters
+      }
+    },
+    {
+      name: 'description',
+      weight: 5,
+      config: {
+        minSize: 2,
+        prefixOnly: false     // Match anywhere in the text
+      }
+    }
+  ]
+});
+```
+
+### Search Analytics
+
+Analytics help you monitor and optimize your search performance. Enable analytics by setting the `analytics` option to `true`:
+
+```javascript
+const UserSchema = new Schema({
+  firstName: String,
+  lastName: String,
+  email: String
+});
+
+UserSchema.plugin(fuzzily_mongoose, {
+  fields: ['firstName', 'lastName', 'email'],
+  analytics: true
+});
+
+// Get overall analytics
+const analytics = await User.getAnalytics();
+console.log(analytics);
+// {
+//   totalSearches: 150,
+//   averageResponseTime: 45,
+//   successRate: 0.98,
+//   popularQueries: [
+//     { query: 'john', count: 25 },
+//     { query: 'smith', count: 18 }
+//   ],
+//   averageResultsPerQuery: 3.2
+// }
+
+// Get analytics for specific metrics
+const metrics = await User.getAnalytics(['responseTime', 'successRate']);
+console.log(metrics);
+// {
+//   averageResponseTime: 45,
+//   successRate: 0.98
+// }
+```
+
+### Smart Search Suggestions
+
+Suggestions help users find what they're looking for by providing intelligent query suggestions:
+
+```javascript
+const ProductSchema = new Schema({
+  name: String,
+  category: String,
+  brand: String
+});
+
+ProductSchema.plugin(fuzzily_mongoose, {
+  fields: ['name', 'category', 'brand'],
+  suggestions: {
+    minLength: 2,           // Minimum query length for suggestions
+    maxSuggestions: 5,      // Maximum number of suggestions
+    threshold: 0.7          // Minimum similarity score (0-1)
+  }
+});
+
+// Get suggestions for a partial query
+const suggestions = await Product.getSuggestions('app');
+console.log(suggestions);
+// ['apple', 'application', 'appliance', 'apparel']
+
+// Get suggestions with context
+const contextSuggestions = await Product.getSuggestions('app', {
+  category: 'Electronics'  // Filter suggestions by category
+});
+console.log(contextSuggestions);
+// ['apple', 'application']  // Only electronics-related suggestions
+```
+
+### Aggregation Pipeline Support
+
+The aggregation pipeline allows you to perform complex search operations with additional processing:
+
+```javascript
+const OrderSchema = new Schema({
+  customerName: String,
+  productName: String,
+  amount: Number,
+  status: String,
+  createdAt: Date
+});
+
+OrderSchema.plugin(fuzzily_mongoose, {
+  fields: ['customerName', 'productName']
+});
+
+// Complex search with aggregation
+const results = await Order.fuzzySearchAggregate('john', {
+  pipeline: [
+    // Match orders with amount greater than 100
+    { $match: { amount: { $gt: 100 } } },
+    
+    // Group by status and calculate totals
+    {
+      $group: {
+        _id: '$status',
+        totalAmount: { $sum: '$amount' },
+        count: { $sum: 1 }
+      }
+    },
+    
+    // Sort by total amount
+    { $sort: { totalAmount: -1 } }
+  ],
+  // Fuzzy search options
+  maxEdits: 1,           // Maximum edit distance
+  prefixLength: 2,       // Minimum prefix length
+  fuzzy: {
+    maxEdits: 1,
+    prefixLength: 2
+  }
+});
+
+console.log(results);
+// [
+//   { _id: 'completed', totalAmount: 5000, count: 10 },
+//   { _id: 'pending', totalAmount: 3000, count: 5 }
+// ]
+```
+
+You can also combine fuzzy search with other aggregation stages:
+
+```javascript
+const results = await Order.fuzzySearchAggregate('smartphone', {
+  pipeline: [
+    // Match specific date range
+    {
+      $match: {
+        createdAt: {
+          $gte: new Date('2024-01-01'),
+          $lte: new Date('2024-03-31')
+        }
+      }
+    },
+    
+    // Lookup related customer data
+    {
+      $lookup: {
+        from: 'customers',
+        localField: 'customerId',
+        foreignField: '_id',
+        as: 'customer'
+      }
+    },
+    
+    // Project only needed fields
+    {
+      $project: {
+        customerName: 1,
+        productName: 1,
+        amount: 1,
+        'customer.email': 1
+      }
+    }
+  ]
+});
+```
