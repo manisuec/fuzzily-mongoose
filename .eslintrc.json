@@ -1,0 +1,17 @@
+{
+  "root": true,
+  "env": {
+    "node": true,
+    "es2022": true,
+    "jest": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "script"
+  },
+  "extends": ["airbnb-base", "plugin:jest/recommended", "prettier"],
+  "plugins": ["jest", "prettier"],
+  "rules": {
+    "prettier/prettier": "error"
+  }
+}
