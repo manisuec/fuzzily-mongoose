@@ -5,24 +5,24 @@
 
 # Fuzzily-Mongoose: Efficient Fuzzy Search Plugin for MongoDB
 
-## Powerful Fuzzy Search for MongoDB Without the Cost of Atlas or Elasticsearch
+## Fuzzy Search for MongoDB Without the Cost of Atlas or Elasticsearch
 
-Enhance your MongoDB search capabilities with fuzzily-mongoose, a lightweight, high-performance fuzzy search plugin that enables efficient partial text search in self-hosted MongoDB installations. This optimized fork of the original [VassilisPallas/mongoose-fuzzy-searching](https://github.com/VassilisPallas/mongoose-fuzzy-searching) delivers faster search performance and better results through our innovative equality predicate feature.
+fuzzily-mongoose adds partial text (fuzzy) search to self-hosted MongoDB. It is a fork of [VassilisPallas/mongoose-fuzzy-searching](https://github.com/VassilisPallas/mongoose-fuzzy-searching). The fork adds an equality predicate that filters documents before the text query runs, which lowers the number of documents scanned per search.
 
-The reason for a fork and a new npm library is simply from the limitation that text query based on fuzzy logic scans all the documents in a given collection and only then you can filter out documents based on values of other fields. This makes the query inefficient. With the introduction of `equalityPredicate`, you can first filter out the documents and then perform a text query on the filtered documents. See [Performance section](#performance-breakthrough-equality-predicates) for improvement in search with `fuzzily-mongoose` plugin. With the help of this plugin, you can enable partial text search efficiently in self hosted Mongodb installation without going for paid services of Mongodb Atlas or using solutions like Elasticsearch etc. This is very helpful for startups during initial days when cost is a concern and also for developers who are working on their own ideas.
+The reason for a fork and a new npm library is simply from the limitation that text query based on fuzzy logic scans all the documents in a given collection and only then you can filter out documents based on values of other fields. This makes the query inefficient. With the introduction of `equalityPredicate`, you can first filter out the documents and then perform a text query on the filtered documents. See the [Performance section](#performance-equality-predicates) for the numbers. With the help of this plugin, you can enable partial text search efficiently in self hosted Mongodb installation without going for paid services of Mongodb Atlas or using solutions like Elasticsearch etc. This is very helpful for startups during initial days when cost is a concern and also for developers who are working on their own ideas.
 
 <!-- 
 [![Build Status](https://travis-ci.com/VassilisPallas/mongoose-fuzzy-searching.svg?token=iwmbqGL1Zp9rkA7hmQ6P&branch=master)](https://travis-ci.com/VassilisPallas/mongoose-fuzzy-searching)
 [![codecov](https://codecov.io/gh/VassilisPallas/mongoose-fuzzy-searching/branch/master/graph/badge.svg)](https://codecov.io/gh/VassilisPallas/mongoose-fuzzy-searching) -->
 <!-- [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FVassilisPallas%2Fmongoose-fuzzy-searching.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FVassilisPallas%2Fmongoose-fuzzy-searching?ref=badge_shield) -->
 
-## Why Choose Fuzzily-Mongoose?
+## Why Fuzzily-Mongoose?
 
-- **Cost-Effective Alternative** to MongoDB Atlas or Elasticsearch for startups and indie developers
-- **Performance-Optimized** with equality predicates for targeted searching
-- **Simple Integration** with your existing Mongoose schemas
-- **Fully Customizable** fuzzy search parameters and weights
-- **Works with Pre-Existing Data** through easy migration utilities
+- Runs on self-hosted MongoDB, so it does not need MongoDB Atlas or Elasticsearch
+- Equality predicates narrow the document set before the text query runs
+- Plugs into an existing Mongoose schema
+- Per-field n-gram size, prefix matching, and weights are configurable
+- Works with data that predates the plugin through the migration steps below
 
 ## Topics
 
@@ -34,6 +34,9 @@ The reason for a fork and a new npm library is simply from the limitation that t
     - [Fields](#fields)
       - [String field](#string-field)
       - [Object field](#object-field)
+    - [Analytics](#analytics)
+    - [Suggestions](#suggestions)
+    - [Aggregation Pipeline](#aggregation-pipeline)
     - [Equality Predicate](#equality-predicate)
     - [Middlewares](#middlewares)
 - [Query parameters](#query-parameters)
@@ -53,11 +56,11 @@ The reason for a fork and a new npm library is simply from the limitation that t
 - Creates Ngrams for the selected keys in the collection
 - [Add **fuzzySearch** method on model](#simple-usage)
 - [Work with pre-existing data](#work-with-pre-existing-data)
-- Field-specific search weights for better result relevance
-- Search analytics for monitoring and optimization
-- Smart search suggestions for improved user experience
-- Aggregation pipeline support for complex queries
-- Equality predicates for targeted and efficient searching
+- Per-field search weights
+- Search analytics
+- Smart Search suggestions
+- Aggregation pipeline support
+- Equality predicates
 
 ## Install
 
@@ -153,22 +156,22 @@ const UserSchema = new mongoose.Schema({
   orgId: String
 });
 
-// Add fuzzy search capabilities with organization-based filtering
+// Add fuzzy search with an orgId equality predicate
 UserSchema.plugin(fuzzySearchPlugin, { 
   fields: ['firstName', 'lastName'],
-  equalityPredicate: { orgId: 1 }  // The key performance booster!
+  equalityPredicate: { orgId: 1 }  // filter on orgId before the text query
 });
 
 const User = mongoose.model('User', UserSchema);
 
-// Search with high performance
+// Search within a single org
 const results = await User.fuzzySearch('joe', { orgId: 'ORG100' });
 console.log(results);
 ```
 
-## Performance Breakthrough: Equality Predicates
+## Performance: Equality Predicates
 
-Let us define a collection as below
+Define a collection as below
 
 ```javascript
 const mongoose = require('mongoose');
@@ -199,13 +202,13 @@ const results = await Product.fuzzySearch(
 console.log(results);
 ```
 
-Traditional text search in MongoDB scans your entire collection before filtering - a major performance bottleneck. With our `equalityPredicate` feature:
+A plain `$text` search in MongoDB scans the whole collection and filters afterwards. With `equalityPredicate` the order is reversed:
 
-1. **Filter First**: Documents are filtered by exact field matches first
-2. **Then Search**: Fuzzy text search runs only on the filtered subset
-3. **Better Performance**: Dramatically reduces documents scanned
+1. Documents are filtered by the exact field match first.
+2. The fuzzy text query then runs only on that subset.
+3. Fewer documents are scanned per query.
 
-### Real-World Performance Comparison
+### Performance Comparison
 
 | Metric | Without Equality Predicate | With Equality Predicate | Improvement |
 |--------|----------------------------|-------------------------|-------------|
@@ -215,12 +218,12 @@ Traditional text search in MongoDB scans your entire collection before filtering
 
 ## Key Features
 
-- **N-gram Based Fuzzy Matching**: Find results even with typos and misspellings
-- **Weighted Fields**: Prioritize matches in more important fields
-- **Prefix-Only Searching**: Improve precision for autocomplete functionality
-- **Nested Object Support**: Search within complex document structures
-- **Confidence Scoring**: Results automatically sorted by relevance
-- **Chainable with Mongoose Queries**: Works seamlessly with existing query patterns
+- **N-gram fuzzy matching**: matches through typos and misspellings
+- **Weighted fields**: rank matches in some fields above others
+- **Prefix-only matching**: useful for autocomplete
+- **Nested object support**: search keys inside subdocuments
+- **Confidence scoring**: results sort by text score by default
+- **Chainable queries**: composes with the Mongoose query builder
 
 ![performance](https://github.com/manisuec/fuzzily-mongoose/blob/main/image.png)
 
@@ -279,7 +282,7 @@ UserSchema.plugin(fuzzily_mongoose, {
 
 #### Analytics
 
-Enable search analytics to track and optimize your search performance:
+Set `analytics: true` to record search counts, result counts, and response times:
 
 ```javascript
 const UserSchema = new Schema({
@@ -292,20 +295,31 @@ UserSchema.plugin(fuzzily_mongoose, {
   analytics: true  // Enable analytics
 });
 
-// Get analytics data
+// Get all analytics data
 const analytics = await User.getAnalytics();
 console.log(analytics);
 // {
-//   totalSearches: 100,
-//   averageResponseTime: 45,
-//   successRate: 0.98,
-//   popularQueries: [...]
+//   searchCount: 100,
+//   resultCount: 320,
+//   responseTime: [12, 8, 15, ...],          // recorded times (ms)
+//   popularSearches: [['john', 25], ['joe', 18]],  // top 10 [query, count]
+//   failedSearches: [['xyz', 3]]              // top 10 queries with no results
+// }
+
+// Get only specific metrics (responseTime is summarised when requested)
+const metrics = await User.getAnalytics(['searchCount', 'responseTime']);
+console.log(metrics);
+// {
+//   searchCount: 100,
+//   responseTime: { avg: 11.6, min: 8, max: 15 }
 // }
 ```
 
+Valid metric names: `searchCount`, `resultCount`, `responseTime`, `popularSearches`, `failedSearches`.
+
 #### Suggestions
 
-Enable smart search suggestions to improve user experience:
+Pass a `suggestions` object to enable query suggestions:
 
 ```javascript
 const UserSchema = new Schema({
@@ -316,15 +330,22 @@ const UserSchema = new Schema({
 UserSchema.plugin(fuzzily_mongoose, {
   fields: ['firstName', 'lastName'],
   suggestions: {
-    minLength: 2,        // Minimum query length for suggestions
-    maxSuggestions: 5    // Maximum number of suggestions
+    minSize: 2,          // Minimum n-gram size used for matching (default: 2)
+    prefixOnly: false,   // Only match prefixes (default: false)
+    maxSuggestions: 5,   // Maximum number of suggestions (default: 10)
+    minScore: 0.5        // Minimum similarity score, 0-1 (default: 0.5)
   }
 });
 
-// Get suggestions for a partial query
+// Get suggestions for a partial query.
+// Returns an array of { suggestion, score } objects sorted by score (desc).
 const suggestions = await User.getSuggestions('jo');
 console.log(suggestions);
-// ['john', 'joe', 'josh', 'jordan']
+// [
+//   { suggestion: 'Joe', score: 1 },
+//   { suggestion: 'John', score: 0.66 },
+//   { suggestion: 'Jordan', score: 0.5 }
+// ]
 ```
 
 #### Aggregation Pipeline
@@ -332,15 +353,20 @@ console.log(suggestions);
 Use the aggregation pipeline for complex search queries:
 
 ```javascript
-const results = await User.fuzzySearchAggregate('jo', {
-  pipeline: [
-    { $match: { age: { $gt: 18 } } },
-    { $project: { firstName: 1, lastName: 1 } }
-  ],
-  maxEdits: 1,           // Maximum edit distance
-  prefixLength: 2        // Minimum prefix length for fuzzy matching
-});
+// First argument: the query (String, or an Object with { query, minSize, prefixOnly, exact })
+// Second argument: { pipeline }, extra stages appended after the fuzzy $match stage
+const results = await User.fuzzySearchAggregate(
+  { query: 'jo', minSize: 2, prefixOnly: true },
+  {
+    pipeline: [
+      { $match: { age: { $gt: 18 } } },
+      { $project: { firstName: 1, lastName: 1 } }
+    ]
+  }
+);
 ```
+
+The fuzzy `$text` match is injected as the **first** stage of the pipeline (required by MongoDB), then your custom stages run on the matched documents.
 
 #### Equality Predicate
 
@@ -374,7 +400,7 @@ User.fuzzySearch({ query: 'jo', prefixOnly: true, minSize: 4 }, {orgId: 'ORG100'
 
 ```
 
-The above code will first filter out documents based on org id and then run text query on filtered documents. This improves the number of documents scanned and hence improves the performance of query in a big way.
+The query above filters documents by org id first, then runs the text query on that subset. Fewer documents are scanned, so the query runs faster.
 
 #### Middlewares
 
@@ -657,7 +683,7 @@ SOFTWARE.
 
 ### Field-specific Search Weights
 
-Field weights allow you to prioritize certain fields in your search results. Higher weights mean higher priority in the search ranking.
+A higher weight ranks matches in that field above matches in lower-weighted fields.
 
 ```javascript
 const ProductSchema = new Schema({
@@ -690,9 +716,8 @@ ProductSchema.plugin(fuzzily_mongoose, {
       name: 'name',
       weight: 10,
       config: {
-        minSize: 3,           // Minimum n-gram size
-        prefixOnly: true,     // Only match prefixes
-        escapeSpecialCharacters: false  // Keep special characters
+        minSize: 3,        // Minimum n-gram size
+        prefixOnly: true   // Only match prefixes
       }
     },
     {
@@ -700,16 +725,18 @@ ProductSchema.plugin(fuzzily_mongoose, {
       weight: 5,
       config: {
         minSize: 2,
-        prefixOnly: false     // Match anywhere in the text
+        prefixOnly: false  // Match anywhere in the text
       }
     }
   ]
 });
 ```
 
+Valid `config` keys are: `minSize`, `prefixOnly`, `weight`, `usePhonetic`, `useStemming`, `language`, and `suggestions`. Passing any other key throws a `TypeError` at plugin registration.
+
 ### Search Analytics
 
-Analytics help you monitor and optimize your search performance. Enable analytics by setting the `analytics` option to `true`:
+Set the `analytics` option to `true` to record search activity on the model:
 
 ```javascript
 const UserSchema = new Schema({
@@ -727,28 +754,31 @@ UserSchema.plugin(fuzzily_mongoose, {
 const analytics = await User.getAnalytics();
 console.log(analytics);
 // {
-//   totalSearches: 150,
-//   averageResponseTime: 45,
-//   successRate: 0.98,
-//   popularQueries: [
-//     { query: 'john', count: 25 },
-//     { query: 'smith', count: 18 }
+//   searchCount: 150,
+//   resultCount: 480,
+//   responseTime: [45, 32, 51, ...],
+//   popularSearches: [
+//     ['john', 25],
+//     ['smith', 18]
 //   ],
-//   averageResultsPerQuery: 3.2
+//   failedSearches: [
+//     ['zzz', 4]
+//   ]
 // }
 
-// Get analytics for specific metrics
-const metrics = await User.getAnalytics(['responseTime', 'successRate']);
+// Get analytics for specific metrics.
+// When 'responseTime' is requested it is summarised as { avg, min, max }.
+const metrics = await User.getAnalytics(['responseTime', 'searchCount']);
 console.log(metrics);
 // {
-//   averageResponseTime: 45,
-//   successRate: 0.98
+//   responseTime: { avg: 42.6, min: 32, max: 51 },
+//   searchCount: 150
 // }
 ```
 
 ### Smart Search Suggestions
 
-Suggestions help users find what they're looking for by providing intelligent query suggestions:
+`getSuggestions` returns candidate values ranked by n-gram overlap with the query:
 
 ```javascript
 const ProductSchema = new Schema({
@@ -760,28 +790,30 @@ const ProductSchema = new Schema({
 ProductSchema.plugin(fuzzily_mongoose, {
   fields: ['name', 'category', 'brand'],
   suggestions: {
-    minLength: 2,           // Minimum query length for suggestions
+    minSize: 2,             // Minimum n-gram size used for matching
+    prefixOnly: false,      // Only match prefixes
     maxSuggestions: 5,      // Maximum number of suggestions
-    threshold: 0.7          // Minimum similarity score (0-1)
+    minScore: 0.7           // Minimum similarity score (0-1)
   }
 });
 
-// Get suggestions for a partial query
+// Get suggestions for a partial query.
+// Returns an array of { suggestion, score } objects, sorted by score (desc).
 const suggestions = await Product.getSuggestions('app');
 console.log(suggestions);
-// ['apple', 'application', 'appliance', 'apparel']
-
-// Get suggestions with context
-const contextSuggestions = await Product.getSuggestions('app', {
-  category: 'Electronics'  // Filter suggestions by category
-});
-console.log(contextSuggestions);
-// ['apple', 'application']  // Only electronics-related suggestions
+// [
+//   { suggestion: 'apple', score: 1 },
+//   { suggestion: 'application', score: 0.8 },
+//   { suggestion: 'appliance', score: 0.75 },
+//   { suggestion: 'apparel', score: 0.7 }
+// ]
 ```
+
+> **Note:** `getSuggestions` matches against the configured fuzzy `fields` across all documents. The similarity score is the fraction of the query's n-grams that appear in a candidate value.
 
 ### Aggregation Pipeline Support
 
-The aggregation pipeline allows you to perform complex search operations with additional processing:
+`fuzzySearchAggregate` runs the fuzzy match as the first stage, then your own pipeline stages:
 
 ```javascript
 const OrderSchema = new Schema({
@@ -813,14 +845,7 @@ const results = await Order.fuzzySearchAggregate('john', {
     
     // Sort by total amount
     { $sort: { totalAmount: -1 } }
-  ],
-  // Fuzzy search options
-  maxEdits: 1,           // Maximum edit distance
-  prefixLength: 2,       // Minimum prefix length
-  fuzzy: {
-    maxEdits: 1,
-    prefixLength: 2
-  }
+  ]
 });
 
 console.log(results);
