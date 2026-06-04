@@ -59,7 +59,7 @@ describe('createFields', () => {
   it('should create the fields', () => {
     fields = [
       'test',
-      { keys: ['key_test_1', 'key_test_2'], name: 'some__key_name' },
+      { keys: ['key_test_1', 'key_test_2'], name: 'some__key_name', weight: 5 },
       { name: 'some_name', weight: 10 },
     ];
 
@@ -86,7 +86,11 @@ describe('createFields', () => {
       'some__key_name_fuzzy.key_test_2_fuzzy': 'text',
       some_name_fuzzy: 'text',
     });
-    expect(weights).toStrictEqual({ some_name_fuzzy: 10 });
+    expect(weights).toStrictEqual({
+      'some__key_name_fuzzy.key_test_1_fuzzy': 5,
+      'some__key_name_fuzzy.key_test_2_fuzzy': 5,
+      some_name_fuzzy: 10,
+    });
   });
 });
 

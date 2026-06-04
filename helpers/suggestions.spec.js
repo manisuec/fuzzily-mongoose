@@ -18,6 +18,17 @@ describe('SearchSuggestions', () => {
     });
   });
 
+  describe('constructor', () => {
+    it('should apply defaults when constructed without options', () => {
+      const defaults = new SearchSuggestions();
+
+      expect(defaults.minSize).toBe(2);
+      expect(defaults.prefixOnly).toBe(false);
+      expect(defaults.maxSuggestions).toBe(10);
+      expect(defaults.minScore).toBe(0.5);
+    });
+  });
+
   describe('generateSuggestions', () => {
     it('should return empty array for empty query', () => {
       const result = suggestions.generateSuggestions('', testDocuments, ['title']);
@@ -34,6 +45,14 @@ describe('SearchSuggestions', () => {
       expect(result).toHaveLength(0);
     });
 
+    it('should skip documents that do not have the searched field', () => {
+      const docs = [{ title: 'Python Programming' }, { description: 'Learn Python' }];
+      const result = suggestions.generateSuggestions('prog', docs, ['title']);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].suggestion).toBe('Python Programming');
+    });
+
     it('should generate suggestions based on title field', () => {
       const result = suggestions.generateSuggestions('prog', testDocuments, ['title']);
       
@@ -46,11 +65,13 @@ describe('SearchSuggestions', () => {
 
     it('should generate suggestions based on multiple fields', () => {
       const result = suggestions.generateSuggestions('learn', testDocuments, ['title', 'description']);
-      
+
+      // 'learn' only matches the descriptions (all start with "Learn"); the
+      // matched field values are returned, capped at maxSuggestions: 3.
       expect(result).toHaveLength(3);
-      expect(result[0].suggestion).toBe('Web Development');
-      expect(result[1].suggestion).toBe('JavaScript Programming');
-      expect(result[2].suggestion).toBe('Python Programming');
+      expect(result[0].suggestion).toBe('Learn JavaScript');
+      expect(result[1].suggestion).toBe('Learn Python');
+      expect(result[2].suggestion).toBe('Learn Java');
     });
 
     it('should respect maxSuggestions limit', () => {

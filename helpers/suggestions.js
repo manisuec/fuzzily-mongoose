@@ -1,5 +1,10 @@
-const { nGrams } = require('./ngrams');
-const { DEFAULT_MIN_SIZE, DEFAULT_PREFIX_ONLY } = require('./config');
+const config = require('./config');
+const languageCharacters = require('./languageCharacters');
+const { replaceSymbols } = require('./utils');
+const { makeNGrams } = require('./ngrams');
+
+const { DEFAULT_MIN_SIZE, DEFAULT_PREFIX_ONLY } = config;
+const nGrams = makeNGrams(config, replaceSymbols(languageCharacters));
 
 class SearchSuggestions {
   constructor(options = {}) {
@@ -21,7 +26,7 @@ class SearchSuggestions {
       return [];
     }
 
-    const queryNGrams = nGrams(query, this.prefixOnly, this.minSize);
+    const queryNGrams = nGrams(query, false, this.minSize, this.prefixOnly);
     const suggestions = new Map();
 
     documents.forEach(doc => {
@@ -29,7 +34,7 @@ class SearchSuggestions {
         const fieldValue = doc[field];
         if (!fieldValue) return;
 
-        const fieldNGrams = nGrams(fieldValue, this.prefixOnly, this.minSize);
+        const fieldNGrams = nGrams(fieldValue, false, this.minSize, this.prefixOnly);
         const score = this.calculateScore(queryNGrams, fieldNGrams);
 
         if (score >= this.minScore) {

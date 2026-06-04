@@ -26,9 +26,11 @@ const nGrams = (constants) => (text, minSize, prefixOnly) => {
   }
 
   const normalizedText = text.slice ? text.toLowerCase() : String(text);
-  
+
+  // When the text is no longer than the lower limit there are no sub-sequences
+  // to generate, so the whole (normalized) text is the only n-gram.
   if (normalizedText.length <= minSize) {
-    return [];
+    return [normalizedText];
   }
 
   const set = new Set();

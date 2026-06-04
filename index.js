@@ -13,21 +13,14 @@ const { Query } = require('mongoose');
 const SearchAnalytics = require('./helpers/analytics');
 const SearchSuggestions = require('./helpers/suggestions');
 
-const parseArguments = (args, i1, i2) => {
+const parseArguments = (args, i1) => {
   let options = {};
-  let callback = null;
 
-  if (args[i1] && isFunction(args[i1])) {
-    callback = args[i1];
-  } else if (args[i1] && isObject(args[i1])) {
+  if (args[i1] && isObject(args[i1])) {
     options = args[i1];
   }
 
-  if (!callback && isFunction(args[i2])) {
-    callback = args[i2];
-  }
-
-  return { options, callback };
+  return { options };
 };
 
 const validateItem = (item) => {
@@ -45,15 +38,15 @@ const validateMiddlewares = (middlewares) => {
 
   const invalidKeys = Object.keys(middlewares).filter(key => !validMiddlewares.includes(key));
   if (invalidKeys.length > 0) {
-    throw new TypeError(`Invalid middleware keys: ${invalidKeys.join(', ')}. Valid keys are: [${validMiddlewares.join(', ')}]`);
+    throw new TypeError(`Middleware key should be one of: [${validMiddlewares.join(', ')}].`);
   }
 
   const nonFunctionMiddlewares = Object.entries(middlewares)
     .filter(([_, value]) => !isFunction(value))
     .map(([key]) => key);
-  
+
   if (nonFunctionMiddlewares.length > 0) {
-    throw new TypeError(`Middlewares must be functions. Invalid middlewares: ${nonFunctionMiddlewares.join(', ')}`);
+    throw new TypeError('Middleware must be a Function.');
   }
 };
 
@@ -76,7 +69,7 @@ const getArgs = (queryArgs) => {
 function fuzzySearch(...args) {
   const startTime = Date.now();
   const queryArgs = Object.values(args);
-  const { callback, options } = parseArguments(queryArgs, 1, 2);
+  const { options } = parseArguments(queryArgs, 1);
 
   if (queryArgs.length === 0 || (!isString(queryArgs[0]) && !isObject(queryArgs[0]))) {
     throw new TypeError(
@@ -100,23 +93,28 @@ function fuzzySearch(...args) {
     : { $and: [{ $text: { $search: query } }, options] };
 
   const queryPromise = this instanceof Query
-    ? this.find.apply(this, [search, callback])
-    : this.find.apply(this, [
+    ? this.find(search)
+    : this.find(
         search,
         { confidenceScore: { $meta: 'textScore' } },
         { sort: { confidenceScore: { $meta: 'textScore' } } },
-        callback,
-      ]);
+      );
 
-  // Record analytics
+  // Record analytics. Executing the query here would consume it, so we resolve
+  // it once and surface the results (a search returning no documents counts as a
+  // failed search).
   if (this.analytics) {
-    queryPromise.then(results => {
-      const responseTime = Date.now() - startTime;
-      this.analytics.recordSearch(queryString, results.length, responseTime);
-    }).catch(() => {
-      const responseTime = Date.now() - startTime;
-      this.analytics.recordSearch(queryString, 0, responseTime, false);
-    });
+    return Promise.resolve(queryPromise)
+      .then(results => {
+        const responseTime = Date.now() - startTime;
+        this.analytics.recordSearch(queryString, results.length, responseTime, results.length > 0);
+        return results;
+      })
+      .catch(err => {
+        const responseTime = Date.now() - startTime;
+        this.analytics.recordSearch(queryString, 0, responseTime, false);
+        throw err;
+      });
   }
 
   return queryPromise;
@@ -244,37 +242,29 @@ module.exports = function (schema, pluginOptions) {
     }
 
     const { checkPrefixOnly, defaultNgamMinSize } = getDefaultValues(query);
-    const ngramQuery = nGrams(queryString, false, defaultNgamMinSize, checkPrefixOnly).join(' ');
+    const ngramQuery = exact
+      ? `"${queryString}"`
+      : nGrams(queryString, false, defaultNgamMinSize, checkPrefixOnly).join(' ');
 
-    const searchStage = {
-      $search: {
-        text: {
-          query: ngramQuery,
-          path: fields.map(f => f.keys).flat(),
-          fuzzy: {
-            maxEdits: options.maxEdits || 1,
-            prefixLength: options.prefixLength || 1
-          }
-        }
-      }
-    };
-
-    const pipeline = [searchStage, ...(options.pipeline || [])];
+    // `$text` works on self-hosted MongoDB (unlike Atlas-only `$search`) and
+    // must be the first stage of the pipeline.
+    const matchStage = { $match: { $text: { $search: ngramQuery } } };
+    const pipeline = [matchStage, ...(options.pipeline || [])];
     return this.aggregate(pipeline);
   };
 
   // Add suggestions method
-  schema.statics.getSuggestions = function (query, options = {}) {
+  schema.statics.getSuggestions = async function (query, options = {}) {
     if (!this.suggestions) {
       throw new Error('Suggestions are not enabled for this model');
     }
-    return this.find().then(docs => 
-      this.suggestions.generateSuggestions(query, docs, fields.map(f => f.keys).flat())
-    );
+    const docs = await this.find();
+    const searchPaths = fields.flatMap(f => f.keys || [f.name]);
+    return this.suggestions.generateSuggestions(query, docs, searchPaths);
   };
 
   // Add analytics method
-  schema.statics.getAnalytics = function (metrics) {
+  schema.statics.getAnalytics = async function (metrics) {
     if (!this.analytics) {
       throw new Error('Analytics are not enabled for this model');
     }

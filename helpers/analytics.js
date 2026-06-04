@@ -1,5 +1,3 @@
-const { validAnalytics } = require('./config');
-
 class SearchAnalytics {
   constructor() {
     this.analytics = {
@@ -35,11 +33,36 @@ class SearchAnalytics {
   }
 
   /**
-   * Get analytics data
-   * @param {string[]} metrics - Metrics to retrieve
+   * Sort a Map of `query -> count` by descending count and cap the result.
+   * @param {Map} searches
+   * @returns {Array} Array of `[query, count]` entries
+   */
+  static topSearches(searches) {
+    return Array.from(searches.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+  }
+
+  /**
+   * Get analytics data.
+   *
+   * When called without `metrics`, the raw collected data is returned (with
+   * `responseTime` as the list of recorded times). When specific `metrics` are
+   * requested, `responseTime` is summarised into `{ avg, min, max }`.
+   * @param {string[]} [metrics] - Metrics to retrieve
    * @returns {Object} Analytics data
    */
-  getAnalytics(metrics = validAnalytics) {
+  getAnalytics(metrics) {
+    if (!metrics) {
+      return {
+        searchCount: this.analytics.searchCount,
+        resultCount: this.analytics.resultCount,
+        responseTime: [...this.analytics.responseTime],
+        popularSearches: SearchAnalytics.topSearches(this.analytics.popularSearches),
+        failedSearches: SearchAnalytics.topSearches(this.analytics.failedSearches)
+      };
+    }
+
     const result = {};
 
     if (metrics.includes('searchCount')) {
@@ -60,15 +83,11 @@ class SearchAnalytics {
     }
 
     if (metrics.includes('popularSearches')) {
-      result.popularSearches = Array.from(this.analytics.popularSearches.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10);
+      result.popularSearches = SearchAnalytics.topSearches(this.analytics.popularSearches);
     }
 
     if (metrics.includes('failedSearches')) {
-      result.failedSearches = Array.from(this.analytics.failedSearches.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10);
+      result.failedSearches = SearchAnalytics.topSearches(this.analytics.failedSearches);
     }
 
     return result;

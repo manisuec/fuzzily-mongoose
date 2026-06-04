@@ -1,11 +1,14 @@
 const mongoose = require('mongoose');
 const fuzzySearch = require('../index');
+const db = require('../__tests__/support/db');
 
 describe('Equality Predicate Tests', () => {
   let TestModel;
   let testDocs;
 
   beforeAll(async () => {
+    await db.openConnection();
+
     const schema = new mongoose.Schema({
       name: String,
       category: String,
@@ -15,10 +18,12 @@ describe('Equality Predicate Tests', () => {
 
     schema.plugin(fuzzySearch, {
       fields: ['name'],
-      equalityPredicate: { category: 1 }
+      equalityPredicate: { category: 1 },
+      analytics: true
     });
 
     TestModel = mongoose.model('EqualityTest', schema);
+    await TestModel.init();
 
     // Create test documents with different categories
     testDocs = await TestModel.create([
@@ -51,7 +56,7 @@ describe('Equality Predicate Tests', () => {
 
   afterAll(async () => {
     await TestModel.deleteMany({});
-    await mongoose.connection.close();
+    await db.closeConnection();
   });
 
   describe('Basic Functionality', () => {
@@ -108,23 +113,19 @@ describe('Equality Predicate Tests', () => {
 
     it('should maintain fuzzy search relevance scores', async () => {
       const results = await TestModel.fuzzySearch('programming', { category: 'Programming' });
-      expect(results[0].confidenceScore).toBeDefined();
-      expect(results[0].confidenceScore).toBeGreaterThan(0);
+      expect(results[0].get('confidenceScore')).toBeDefined();
+      expect(results[0].get('confidenceScore')).toBeGreaterThan(0);
     });
   });
 
-  describe('Performance Verification', () => {
-    it('should execute faster with equality predicate', async () => {
-      const startTimeWithPredicate = Date.now();
-      await TestModel.fuzzySearch('programming', { category: 'Programming' });
-      const timeWithPredicate = Date.now() - startTimeWithPredicate;
+  describe('Index Requirements', () => {
+    it('should require the equality predicate for the compound text index', async () => {
+      const results = await TestModel.fuzzySearch('programming', { category: 'Programming' });
+      expect(results).toHaveLength(2);
 
-      const startTimeWithoutPredicate = Date.now();
-      await TestModel.fuzzySearch('programming');
-      const timeWithoutPredicate = Date.now() - startTimeWithoutPredicate;
-
-      // The time with predicate should be significantly less
-      expect(timeWithPredicate).toBeLessThan(timeWithoutPredicate);
+      // The compound text index is prefixed by the equality field, so MongoDB
+      // rejects a `$text` search that does not constrain that field.
+      await expect(TestModel.fuzzySearch('programming')).rejects.toThrow();
     });
   });
 

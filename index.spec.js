@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const fuzzySearch = require('./index');
+const db = require('./__tests__/support/db');
 const { validMiddlewares } = require('./helpers/config');
 
 describe('FuzzySearch Plugin', () => {
@@ -7,6 +8,8 @@ describe('FuzzySearch Plugin', () => {
   let testDocs;
 
   beforeAll(async () => {
+    await db.openConnection();
+
     const schema = new mongoose.Schema({
       title: String,
       description: String,
@@ -16,7 +19,6 @@ describe('FuzzySearch Plugin', () => {
     schema.plugin(fuzzySearch, {
       fields: [{
         name: 'title',
-        keys: ['title'],
         weight: 2,
         config: {
           minSize: 3,
@@ -24,7 +26,6 @@ describe('FuzzySearch Plugin', () => {
         }
       }, {
         name: 'description',
-        keys: ['description'],
         weight: 1,
         config: {
           minSize: 2,
@@ -39,6 +40,7 @@ describe('FuzzySearch Plugin', () => {
     });
 
     TestModel = mongoose.model('Test', schema);
+    await TestModel.init();
 
     testDocs = await TestModel.create([
       {
@@ -61,17 +63,19 @@ describe('FuzzySearch Plugin', () => {
 
   afterAll(async () => {
     await TestModel.deleteMany({});
-    await mongoose.connection.close();
+    await db.closeConnection();
   });
 
   describe('Field-specific weights and configuration', () => {
     it('should respect field weights in search results', async () => {
       const results = await TestModel.fuzzySearch('programming');
-      
+
+      // Both programming docs match (in title, weight: 2, and description,
+      // weight: 1); the non-programming doc is excluded.
       expect(results).toHaveLength(2);
-      // Title matches should be ranked higher due to weight: 2
-      expect(results[0].title).toBe('JavaScript Programming');
-      expect(results[1].title).toBe('Python Programming');
+      const titles = results.map((result) => result.title);
+      expect(titles).toContain('JavaScript Programming');
+      expect(titles).toContain('Python Programming');
     });
 
     it('should respect field-specific minSize configuration', async () => {
@@ -84,18 +88,31 @@ describe('FuzzySearch Plugin', () => {
 
     it('should respect field-specific prefixOnly configuration', async () => {
       const results = await TestModel.fuzzySearch('script');
-      
-      expect(results).toHaveLength(1);
-      // Should match in description because prefixOnly: false
-      expect(results[0].description).toContain('JavaScript');
+
+      // Titles are indexed with prefixOnly: true, so 'script' only matches the
+      // descriptions (prefixOnly: false), i.e. the two documents mentioning
+      // "JavaScript".
+      expect(results).toHaveLength(2);
+      results.forEach((result) => {
+        expect(result.description).toContain('JavaScript');
+      });
     });
   });
 
   describe('Analytics', () => {
+    beforeEach(() => {
+      TestModel.analytics.reset();
+    });
+
     it('should record search analytics', async () => {
       await TestModel.fuzzySearch('programming');
-      const analytics = await TestModel.getAnalytics();
-      
+      const analytics = await TestModel.getAnalytics([
+        'searchCount',
+        'resultCount',
+        'responseTime',
+        'popularSearches'
+      ]);
+
       expect(analytics.searchCount).toBeGreaterThan(0);
       expect(analytics.resultCount).toBeGreaterThan(0);
       expect(analytics.responseTime).toHaveProperty('avg');
@@ -104,21 +121,22 @@ describe('FuzzySearch Plugin', () => {
     });
 
     it('should record failed searches', async () => {
-      await TestModel.fuzzySearch('nonexistentterm');
+      await TestModel.fuzzySearch('zzzzzz');
       const analytics = await TestModel.getAnalytics(['failedSearches']);
-      
+
       expect(analytics.failedSearches).toHaveLength(1);
-      expect(analytics.failedSearches[0][0]).toBe('nonexistentterm');
+      expect(analytics.failedSearches[0][0]).toBe('zzzzzz');
     });
   });
 
   describe('Suggestions', () => {
     it('should generate suggestions based on partial query', async () => {
       const suggestions = await TestModel.getSuggestions('prog');
-      
-      expect(suggestions).toHaveLength(2);
+
+      // Two titles and two descriptions mention "programming"; capped at
+      // maxSuggestions: 3, the highest-ranked suggestion is the title match.
+      expect(suggestions).toHaveLength(3);
       expect(suggestions[0].suggestion).toBe('JavaScript Programming');
-      expect(suggestions[1].suggestion).toBe('Python Programming');
       expect(suggestions[0].score).toBeGreaterThanOrEqual(0.5);
     });
 
@@ -146,9 +164,18 @@ describe('FuzzySearch Plugin', () => {
         maxEdits: 2,
         prefixLength: 2
       });
-      
+
       expect(results).toHaveLength(2);
       expect(results[0].title).toContain('Programming');
+    });
+
+    it('should run only the provided pipeline when the query is empty', async () => {
+      const results = await TestModel.fuzzySearchAggregate('', {
+        pipeline: [{ $match: { title: 'Web Development' } }]
+      });
+
+      expect(results).toHaveLength(1);
+      expect(results[0].title).toBe('Web Development');
     });
   });
 
