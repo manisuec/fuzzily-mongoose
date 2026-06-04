@@ -5,14 +5,22 @@
  * @return {string} the given text without the special characters.
  */
 const replaceSymbols = (replaceLanguageCharacters) => (text, escapeSpecialCharacters) => {
-  text = text.toLowerCase();
-  if (escapeSpecialCharacters) {
-    text = text.replace(/[!"#%&'()*+,-./:;<=>?@[\\\]^`{|}~]/g, ''); // remove special characters
+  if (!text) {
+    return '';
   }
-  text = text.replace(/_/g, ' ');
-  text = replaceLanguageCharacters(text);
 
-  return text;
+  let processedText = text.toLowerCase();
+
+  if (escapeSpecialCharacters) {
+    // Remove special characters except spaces and underscores
+    processedText = processedText.replace(/[!"#%&'()*+,-./:;<=>?@[\\\]^`{|}~]/g, '');
+  }
+
+  // Replace underscores with spaces
+  processedText = processedText.replace(/_/g, ' ');
+
+  // Apply language-specific character replacements
+  return replaceLanguageCharacters(processedText);
 };
 
 /**
@@ -20,16 +28,27 @@ const replaceSymbols = (replaceLanguageCharacters) => (text, escapeSpecialCharac
  * @param {any} obj
  * @return {boolean}
  */
-const isObject = (obj) => !!obj && obj.constructor === Object && Object.keys(obj).length > 0;
+const isObject = (obj) => {
+  return obj !== null && 
+         typeof obj === 'object' && 
+         !Array.isArray(obj) && 
+         Object.keys(obj).length > 0;
+};
 
 /**
  * Returns if the variable is a Function
  * @param {any} fn
  * @return {boolean}
  */
-const isFunction = (fn) => !!(fn && (typeof fn === 'function' || fn instanceof Function));
+const isFunction = (fn) => {
+  return typeof fn === 'function' || 
+         (fn && typeof fn === 'object' && fn.constructor === Function);
+};
 
-const isString = (input) => typeof input === 'string' || input instanceof String;
+const isString = (input) => {
+  return typeof input === 'string' || 
+         (input && typeof input === 'object' && input.constructor === String);
+};
 
 module.exports = {
   replaceSymbols,

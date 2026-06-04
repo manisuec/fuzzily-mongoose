@@ -132,18 +132,13 @@ describe('fuzzySearch', () => {
       await db.seed(Model, { name: 'Joe' });
     });
 
-    it('fuzzySearch() -> should return the results with callback', () => {
-      return new Promise((done) => {
-        Model.fuzzySearch('jo', (err, doc) => {
-          expect(err).toBe(null);
-          expect(doc).toHaveLength(1);
-          done(err);
-        });
-      });
+    it('fuzzySearch() -> should return the results', async () => {
+      const doc = await Model.fuzzySearch('jo');
+      expect(doc).toHaveLength(1);
     });
   });
 
-  describe('mongoose_fuzzy_searching with options and callback', () => {
+  describe('mongoose_fuzzy_searching with options', () => {
     const Model = db.createSchema('with options and callback', { name: String, lastName: String })(
       fuzzySearching,
       [
@@ -158,24 +153,14 @@ describe('fuzzySearch', () => {
       await db.seed(Model, { name: 'Joe', lastName: 'Doe' });
     });
 
-    it('fuzzySearch() -> should not be able to find users when the options searches for `lastName` with value `test` and return the result with callback', () => {
-      return new Promise((done) => {
-        Model.fuzzySearch('jo', { lastName: 'test' }, (err, doc) => {
-          expect(err).toBe(null);
-          expect(doc).toHaveLength(0);
-          done(err);
-        });
-      });
+    it('fuzzySearch() -> should not be able to find users when the options searches for `lastName` with value `test`', async () => {
+      const doc = await Model.fuzzySearch('jo', { lastName: 'test' });
+      expect(doc).toHaveLength(0);
     });
 
-    it('fuzzySearch() -> should not be able to find users when the options searches for `lastName` with value `Doe` and return the result with callback', () => {
-      return new Promise((done) => {
-        Model.fuzzySearch('jo', { lastName: 'Doe' }, (err, doc) => {
-          expect(err).toBe(null);
-          expect(doc).toHaveLength(1);
-          done(err);
-        });
-      });
+    it('fuzzySearch() -> should be able to find users when the options searches for `lastName` with value `Doe`', async () => {
+      const doc = await Model.fuzzySearch('jo', { lastName: 'Doe' });
+      expect(doc).toHaveLength(1);
     });
   });
 
@@ -265,6 +250,7 @@ describe('fuzzySearch', () => {
       })(fuzzySearching, ['name']);
 
       beforeAll(async () => {
+        await Model.init();
         await Model.insertMany([{ name: 'Peter Pan' }, { name: 'Peter Ofori-Quaye' }]);
       });
 
@@ -429,7 +415,7 @@ describe('fuzzySearch', () => {
 
       beforeAll(async () => {
         const obj = await db.seed(Model, { name: 'Joe' });
-        await Model.update({ _id: obj._id }, { name: 'Someone' });
+        await Model.updateOne({ _id: obj._id }, { name: 'Someone' });
       });
 
       it('fuzzySearch() -> should return Promise', () => {
@@ -492,6 +478,7 @@ describe('fuzzySearch', () => {
       );
 
       beforeAll(async () => {
+        await Model.init();
         await Model.insertMany([{ name: 'Vassilis' }, { name: 'Dimitris' }]);
       });
 
@@ -518,6 +505,7 @@ describe('fuzzySearch', () => {
       );
 
       beforeAll(async () => {
+        await Model.init();
         await Model.insertMany([{ name: 'Vassilis' }, { name: 'Dimitris' }]);
         await Model.updateMany({ name: 'Vassilis' }, { name: 'Pallas' });
       });
@@ -563,8 +551,8 @@ describe('fuzzySearch', () => {
       expect(result[0]).toHaveProperty('skill', 'amazing');
     });
 
-    it('should call `preUpdate`', async () => {
-      const preUpdate = jest.fn().mockImplementation(function () {});
+    it('should call `preUpdateOne`', async () => {
+      const preUpdateOne = jest.fn().mockImplementation(function () {});
 
       const Model = db.createSchema('custom pre preUpdate', schema)(
         fuzzySearching,
@@ -575,16 +563,16 @@ describe('fuzzySearch', () => {
           },
         ],
         {
-          preUpdate,
+          preUpdateOne,
         },
       );
 
       const obj = await db.seed(Model, { name: 'Joe', age: 30 });
-      await Model.update({ _id: obj._id }, { skill: 'amazing' });
+      await Model.updateOne({ _id: obj._id }, { skill: 'amazing' });
 
       const result = await Model.fuzzySearch({ query: 'jo' });
       expect(result).toHaveLength(1);
-      expect(preUpdate).toHaveBeenCalledTimes(1);
+      expect(preUpdateOne).toHaveBeenCalledTimes(1);
       expect(result[0]).toHaveProperty('skill', 'amazing');
     });
 
@@ -633,6 +621,7 @@ describe('fuzzySearch', () => {
         },
       );
 
+      await Model.init();
       await Model.insertMany([
         { name: 'Joe', age: 30 },
         { name: 'Doe', age: 26 },
@@ -660,6 +649,7 @@ describe('fuzzySearch', () => {
         },
       );
 
+      await Model.init();
       await Model.insertMany([
         { name: 'Joe', age: 30 },
         { name: 'Doe', age: 26 },
@@ -696,8 +686,8 @@ describe('fuzzySearch', () => {
       expect(result[0]).toHaveProperty('skill', 'amazing');
     });
 
-    it('should call `preSave` and `preUpdate`', async () => {
-      const preUpdate = jest.fn().mockImplementation(function () {});
+    it('should call `preSave` and `preUpdateOne`', async () => {
+      const preUpdateOne = jest.fn().mockImplementation(function () {});
       const preSave = jest.fn().mockImplementation(function () {});
 
       const Model = db.createSchema('custom pre preSave and preUpdate', schema)(
@@ -710,20 +700,20 @@ describe('fuzzySearch', () => {
         ],
         {
           preSave,
-          preUpdate,
+          preUpdateOne,
         },
       );
 
       const obj = await db.seed(Model, { name: 'Joe', age: 30 });
-      await Model.update({ _id: obj._id }, { skill: 'amazing' });
+      await Model.updateOne({ _id: obj._id }, { skill: 'amazing' });
 
       const result = await Model.fuzzySearch({ query: 'jo' });
       expect(result).toHaveLength(1);
       expect(preSave).toHaveBeenCalledTimes(1);
-      expect(preUpdate).toHaveBeenCalledTimes(1);
-      // expect preSave to be called before preUpdate
+      expect(preUpdateOne).toHaveBeenCalledTimes(1);
+      // expect preSave to be called before preUpdateOne
       expect(preSave.mock.invocationCallOrder[0]).toBeLessThan(
-        preUpdate.mock.invocationCallOrder[0],
+        preUpdateOne.mock.invocationCallOrder[0],
       );
       expect(result[0]).toHaveProperty('skill', 'amazing');
     });

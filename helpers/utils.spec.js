@@ -3,6 +3,10 @@ const { replaceSymbols, isFunction, isObject, isString } = require('./utils');
 describe('replaceSymbols', () => {
   const replaceLanguageCharacters = (text) => text;
 
+  it('should return an empty string when the given text is empty', () => {
+    expect(replaceSymbols(replaceLanguageCharacters)('')).toBe('');
+  });
+
   it('should return `hello world` when the given string is `hello_world`', () => {
     expect(replaceSymbols(replaceLanguageCharacters)('hello_world')).toBe('hello world');
   });

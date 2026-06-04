@@ -48,6 +48,10 @@ describe('makeNGrams', () => {
       expect(makeNGrams(constant, replaceSymbols)()).toStrictEqual([]);
     });
 
+    it('should return empty array when the text is only whitespace', () => {
+      expect(makeNGrams(constant, replaceSymbols)('   ')).toStrictEqual([]);
+    });
+
     it('should return `["oe", "jo", "joe", "do", "doe"]` with attribute `Joe Doe`', () => {
       expect(makeNGrams(constant, replaceSymbols)('Joe Doe')).toStrictEqual([
         'oe',

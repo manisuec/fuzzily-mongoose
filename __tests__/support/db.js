@@ -3,32 +3,30 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 const { MongoMemoryServer } = require('mongodb-memory-server');
 
-const mongod = new MongoMemoryServer();
+let mongod;
 
-const getURL = () => {
-  return process.env.MONGO_DB
-    ? 'mongodb://localhost:27017/fuzzy-test'
-    : mongod.getConnectionString();
+const getURL = async () => {
+  if (process.env.MONGO_DB) {
+    return 'mongodb://localhost:27017/fuzzy-test';
+  }
+
+  mongod = await MongoMemoryServer.create();
+  return mongod.getUri();
 };
 
 const openConnection = async () => {
   const uri = await getURL();
 
-  const mongooseOpts = {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    useFindAndModify: false,
-    useCreateIndex: true,
-  };
-
   mongoose.Promise = global.Promise;
-  return mongoose.connect(uri, mongooseOpts);
+  return mongoose.connect(uri);
 };
 
 const closeConnection = async () => {
   await mongoose.connection.dropDatabase();
   await mongoose.connection.close();
-  await mongod.stop();
+  if (mongod) {
+    await mongod.stop();
+  }
 };
 
 const createSchema = (name, schemaStructure, options = {}) => (plugin, fields, middlewares) => {
@@ -46,7 +44,9 @@ const createSchema = (name, schemaStructure, options = {}) => (plugin, fields, m
   return mongoose.model(`Model${testName}`, schema);
 };
 
-const seed = (Model, obj) => {
+const seed = async (Model, obj) => {
+  // Ensure the (text) indexes exist before documents are queried with `$text`.
+  await Model.init();
   const doc = new Model(obj);
   return doc.save();
 };

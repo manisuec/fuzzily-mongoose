@@ -25,6 +25,9 @@ class Create {
   fromObjectKeys(item) {
     item.keys.forEach((key) => {
       this.indexes[`${item.name}_fuzzy.${key}_fuzzy`] = 'text';
+      if (item.weight) {
+        this.weights[`${item.name}_fuzzy.${key}_fuzzy`] = item.weight;
+      }
     });
     this.schema.add(this.addArrayToSchema(this.Type)(item.name));
   }
@@ -48,6 +51,15 @@ class Remove {
   }
 }
 
+const resolveNGramOptions = (item) => {
+  const fieldConfig = item.config || {};
+
+  return {
+    minSize: fieldConfig.minSize != null ? fieldConfig.minSize : item.minSize,
+    prefixOnly: fieldConfig.prefixOnly != null ? fieldConfig.prefixOnly : item.prefixOnly,
+  };
+};
+
 class Generate {
   constructor(attributes, makeNGrams) {
     this.attributes = attributes;
@@ -69,6 +81,7 @@ class Generate {
     let value = this.attributes[`${item.name}`];
     if (value) {
       const escapeSpecialCharacters = item.escapeSpecialCharacters !== false;
+      const { minSize, prefixOnly } = resolveNGramOptions(item);
 
       if (Array.isArray(value)) {
         value = value.join(' ');
@@ -77,8 +90,8 @@ class Generate {
       this.attributes[`${item.name}_fuzzy`] = this.makeNGrams(
         value,
         escapeSpecialCharacters,
-        item.minSize,
-        item.prefixOnly,
+        minSize,
+        prefixOnly,
       );
     }
   }
@@ -86,6 +99,7 @@ class Generate {
   fromObjectKeys(item) {
     if (this.attributes[`${item.name}`]) {
       const escapeSpecialCharacters = item.escapeSpecialCharacters !== false;
+      const { minSize, prefixOnly } = resolveNGramOptions(item);
       const attrs = [];
       let obj = {};
 
@@ -101,8 +115,8 @@ class Generate {
             [`${key}_fuzzy`]: this.makeNGrams(
               d[key],
               escapeSpecialCharacters,
-              item.minSize,
-              item.prefixOnly,
+              minSize,
+              prefixOnly,
             ),
           };
         });
