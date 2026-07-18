@@ -31,21 +31,23 @@ const setTransformers = (isFunction) => (hideElements) => (schema) => {
 
   const toObject = {
     ...(schema.options.toObject || {}),
-    transform: (...args) => {
+    transform: (doc, ret, cb) => {
+      let result = hideElements(doc, ret, cb)
       if (isFunction(toObjectTransform)) {
-        toObjectTransform(...args);
+        result = toObjectTransform(doc, result, cb);
       }
-      return hideElements(...args);
+      return result
     },
   };
 
   const toJSON = {
     ...(schema.options.toJSON || {}),
-    transform: (...args) => {
+    transform: (doc, ret, cb) => {
+      let result = hideElements(doc, ret, cb)
       if (isFunction(toJSONTransform)) {
-        toJSONTransform(...args);
+        result = toJSONTransform(doc, result, cb);
       }
-      return hideElements(...args);
+      return result;
     },
   };
 
